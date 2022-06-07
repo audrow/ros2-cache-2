@@ -13,7 +13,7 @@ async function getDefaultBranch({owner, repo}: {owner: string; repo: string}) {
   ).data.default_branch
 }
 
-async function setBranchAsDefault({
+async function setDefaultBranch({
   owner,
   repo,
   branch,
@@ -129,7 +129,7 @@ async function main() {
     baseBranch: oldBranch,
     newBranchName: newBranch,
   })
-  await setBranchAsDefault({owner, repo, branch: newBranch})
+  await setDefaultBranch({owner, repo, branch: newBranch})
   await retargetPrs({owner, repo, fromBranch: oldBranch, toBranch: newBranch})
 }
 
