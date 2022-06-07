@@ -1,0 +1,64 @@
+{
+  "name": "node-ts-template",
+  "version": "0.0.1",
+  "description": "A starting point for NodeJS Typescript projects.",
+  "main": "dist/cjs/index.js",
+  "types": "dist/types/index.d.ts",
+  "module": "dist/esm/index.js",
+  "source": "src/index.ts",
+  "scripts": {
+    "build": "npm run clean && npm run build:cjs && npm run build:esm && npm run build:types",
+    "build:cjs": "tsc --project ./tsconfig.cjs.json",
+    "build:esm": "tsc --project ./tsconfig.esm.json",
+    "build:types": "tsc --project ./tsconfig.types.json",
+    "clean": "rm -rf dist",
+    "prepare": "husky install",
+    "lint": "eslint src --ignore-path .gitignore --max-warnings 0",
+    "prettier": "prettier --ignore-path .gitignore \"**/*.(js|jsx|json|yml|yaml|css|ts|tsx|md|mdx)\"",
+    "format": "npm run prettier -- --write",
+    "check-format": "npm run prettier -- --list-different",
+    "test": "jest",
+    "validate-sync": "npm-run-all lint check-format test build",
+    "validate": "npm-run-all --parallel lint check-format test build"
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "Audrow Nash",
+  "contributors": [
+    "Audrow Nash <audrow@hey.com>"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/audrow/node-js-template"
+  },
+  "keywords": [
+    "nodejs",
+    "template",
+    "typescript"
+  ],
+  "homepage": "https://github.com/audrow/node-js-template",
+  "bugs": {
+    "mail": "audrow@hey.com",
+    "url": "https://github.com/audrow/node-js-template/issues"
+  },
+  "devDependencies": {
+    "@tsconfig/node16": "^1.0.2",
+    "@types/jest": "^27.5.0",
+    "@types/proper-url-join": "^2.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.27.1",
+    "@typescript-eslint/parser": "^5.27.1",
+    "eslint": "^8.17.0",
+    "eslint-config-prettier": "^8.5.0",
+    "husky": "^8.0.1",
+    "jest": "^27.5.1",
+    "lint-staged": "^13.0.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.6.2",
+    "prettier-plugin-organize-imports": "^2.3.4",
+    "ts-jest": "^27.1.4",
+    "ts-node": "^10.8.1",
+    "typescript": "^4.7.3"
+  }
+}
