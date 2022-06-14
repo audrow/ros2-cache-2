@@ -133,4 +133,6 @@ async function main() {
   await retargetPrs({owner, repo, fromBranch: oldBranch, toBranch: newBranch})
 }
 
-main()
+if (typeof require !== 'undefined' && require.main === module) {
+  main()
+}

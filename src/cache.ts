@@ -130,4 +130,6 @@ async function main() {
   console.log(repos.slice(0, 5))
 }
 
-main()
+if (typeof require !== 'undefined' && require.main === module) {
+  main()
+}
