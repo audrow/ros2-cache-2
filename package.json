@@ -66,6 +66,7 @@
   "dependencies": {
     "axios": "^0.27.2",
     "dotenv": "^16.0.1",
+    "endent": "^2.1.0",
     "git-clone": "^0.2.0",
     "js-yaml": "^4.1.0",
     "octokit": "^1.8.1",

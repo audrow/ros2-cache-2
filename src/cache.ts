@@ -1,18 +1,18 @@
 import axios from 'axios'
 import fs from 'fs'
-import gitClone from 'git-clone'
+import clone from 'git-clone/promise'
 import yaml from 'js-yaml'
 import {join} from 'path'
 import simpleGit from 'simple-git'
 
-function makeCacheDir({
+export function makeCacheDir({
   path,
-  forceRefresh = false,
+  isForceRefresh = false,
 }: {
   path: string
-  forceRefresh?: boolean
+  isForceRefresh?: boolean
 }) {
-  if (fs.existsSync(path) && forceRefresh) {
+  if (fs.existsSync(path) && isForceRefresh) {
     fs.rmSync(path, {recursive: true})
   }
   if (!fs.existsSync(path)) {
@@ -20,7 +20,7 @@ function makeCacheDir({
   }
 }
 
-async function pullGitRepo({
+export async function pullGitRepo({
   url,
   destinationPath,
   version,
@@ -29,9 +29,11 @@ async function pullGitRepo({
   destinationPath: string
   version: string
 }) {
+  let message: string
   if (!fs.existsSync(destinationPath)) {
     try {
-      gitClone(url, destinationPath, {checkout: version})
+      await clone(url, destinationPath, {checkout: version})
+      message = `Cloned ${url} with version ${version}`
     } catch (e) {
       console.error(`Could not clone the repo: ${url}`)
       throw e
@@ -46,12 +48,13 @@ async function pullGitRepo({
     }
     try {
       await git.pull()
+      message = `Pulled ${url} with version ${version}`
     } catch (e) {
       console.error(`Could not pull the branch: ${version}`)
       throw e
     }
   }
-  return destinationPath
+  return message
 }
 
 type ReposFile = {
@@ -69,27 +72,19 @@ type Repo = {
   org: string
   url: string
   version: string
-  localPath?: string
 }
 
-async function pullReposYaml({
-  branch,
-  path,
-}: {
-  branch: 'master' | 'humble' | 'galactic' | 'foxy'
-  path: string
-}) {
-  const url = `https://raw.githubusercontent.com/ros2/ros2/${branch}/ros2.repos`
+export async function downloadFile({path, url}: {url: string; path: string}) {
   const reposText = (await axios.get(url)).data
   fs.writeFileSync(path, reposText)
   return path
 }
 
-function getRepos(path: string): Repo[] {
+export function getRepos(path: string, reposToExclude?: string[]): Repo[] {
   const reposText = fs.readFileSync(path, 'utf8')
   const reposYaml = yaml.load(reposText) as ReposFile
 
-  return Object.entries(reposYaml.repositories).map(
+  const allRepos = Object.entries(reposYaml.repositories).map(
     ([key, {type, url, version}]) => {
       if (type !== 'git') {
         throw new Error(`The repo type must be git: ${key}: ${type}`)
@@ -106,6 +101,25 @@ function getRepos(path: string): Repo[] {
       return {name, org, url, version}
     },
   )
+  if (reposToExclude && reposToExclude.length > 0) {
+    return excludeSelectRepos(allRepos, reposToExclude)
+  } else {
+    return allRepos
+  }
+}
+
+function excludeSelectRepos(repos: Repo[], reposToExclude: string[]): Repo[] {
+  reposToExclude.forEach((r) => {
+    if (r.split('/').length !== 2) {
+      throw Error(
+        `Repo to exclude is not well formed. Must be 'org/name': ${r}`,
+      )
+    }
+  })
+  return repos.filter((r) => {
+    const repoString = `${r.org}/${r.name}`
+    return !reposToExclude.includes(repoString)
+  })
 }
 
 async function main() {
@@ -114,7 +128,8 @@ async function main() {
   makeCacheDir({path: cacheDir})
 
   const reposYamlPath = join(cacheDir, `ros2.repos.${branch}.yaml`)
-  await pullReposYaml({branch, path: reposYamlPath})
+  const url = `https://raw.githubusercontent.com/ros2/ros2/${branch}/ros2.repos`
+  await downloadFile({url, path: reposYamlPath})
   const repos = getRepos(reposYamlPath)
 
   const someRepos = repos.slice(0, 5)
@@ -125,7 +140,6 @@ async function main() {
       destinationPath: repoPath,
       version: repo.version,
     })
-    repo.localPath = repoPath
   }
   console.log(repos.slice(0, 5))
 }

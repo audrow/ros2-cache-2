@@ -1,136 +1,152 @@
-import 'dotenv/config'
-import {Octokit} from 'octokit'
+import endent from 'endent'
+import {existsSync} from 'fs'
+import {downloadFile, getRepos, makeCacheDir, pullGitRepo} from './cache'
+import {REPOS_TO_EXCLUDE} from './config'
+import {createAddAndCommitFile} from './file-system'
+import {
+  createNewBranch,
+  getDefaultBranch,
+  retargetPrs,
+  setDefaultBranch,
+} from './github'
 
-const githubAccessToken = process.env.GITHUB_TOKEN
-const octokit = new Octokit({auth: githubAccessToken})
+import {join} from 'path'
 
-async function getDefaultBranch({owner, repo}: {owner: string; repo: string}) {
-  return (
-    await octokit.rest.repos.get({
-      owner,
-      repo,
-    })
-  ).data.default_branch
+function log(message: string) {
+  console.log(` * ${message}`)
 }
 
-async function setDefaultBranch({
-  owner,
-  repo,
-  branch,
+async function pushMirrorWorkflow({
+  oldBranch,
+  newBranch,
+  repoPath,
+  isDryRun,
 }: {
-  owner: string
-  repo: string
-  branch: string
+  oldBranch: string
+  newBranch: string
+  repoPath: string
+  isDryRun: boolean
 }) {
-  await octokit.rest.repos.update({
-    owner,
-    repo,
-    default_branch: branch,
-  })
-}
+  let message: string
+  const migrationWorkflowFilePath = join(
+    repoPath,
+    '.github',
+    'workflows',
+    `mirror-${newBranch}-to-${oldBranch}.yaml`,
+  )
+  if (existsSync(migrationWorkflowFilePath)) {
+    message = `Doing nothing - Workflow file already exists: ${migrationWorkflowFilePath}`
+  } else {
+    const migrationWorkflowFileContent = endent`
+      name: Mirror ${newBranch} to ${oldBranch}
 
-async function createNewBranch({
-  owner,
-  repo,
-  baseBranch,
-  newBranchName,
-}: {
-  owner: string
-  repo: string
-  baseBranch: string
-  newBranchName: string
-}) {
-  const sha1 = (
-    await octokit.rest.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${baseBranch}`,
-    })
-  ).data.object.sha
+      on:
+        push:
+          branches: [ ${newBranch} ]
 
-  await octokit.rest.git.createRef({
-    owner,
-    repo,
-    ref: `refs/heads/${newBranchName}`,
-    sha: sha1,
-  })
-}
-
-async function retargetPrs({
-  owner,
-  repo,
-  fromBranch,
-  toBranch,
-}: {
-  owner: string
-  repo: string
-  fromBranch: string
-  toBranch: string
-}) {
-  const prs = await getPrNumbersTargetingABranch({
-    owner,
-    repo,
-    branch: fromBranch,
-  })
-  await changePrTargetsToBranch({owner, repo, branch: toBranch, prs})
-}
-
-async function getPrNumbersTargetingABranch({
-  owner,
-  repo,
-  branch,
-}: {
-  owner: string
-  repo: string
-  branch: string
-}) {
-  const prs = (
-    await octokit.rest.pulls.list({
-      owner,
-      repo,
-      state: 'open',
-      base: branch,
-    })
-  ).data.map((pr) => pr.number)
-
-  return prs
-}
-
-async function changePrTargetsToBranch({
-  owner,
-  repo,
-  branch,
-  prs,
-}: {
-  owner: string
-  repo: string
-  branch: string
-  prs: number[]
-}) {
-  for (const pr of prs) {
-    await octokit.rest.pulls.update({
-      owner,
-      repo,
-      pull_number: pr,
-      base: branch,
+      jobs:
+        mirror-to-${oldBranch}:
+          runs-on: ubuntu-latest
+          steps:
+          - uses: zofrex/mirror-branch@v1
+            with:
+              target-branch: ${oldBranch}
+    `
+    message = await createAddAndCommitFile({
+      repoPath: repoPath,
+      filePath: migrationWorkflowFilePath,
+      fileContent: migrationWorkflowFileContent,
+      commitMessage: `Mirror ${newBranch} to ${oldBranch}`,
+      isDryRun,
     })
   }
+  log(message)
+}
+
+async function changeDefaultBranchAndRetargetPrs({
+  oldBranch,
+  newBranch,
+  repoOrg,
+  repoName,
+  isDryRun,
+}: {
+  oldBranch: string
+  newBranch: string
+  repoOrg: string
+  repoName: string
+  isDryRun: boolean
+}) {
+  let message: string
+  if (!isDryRun) {
+    await createNewBranch({
+      org: repoOrg,
+      name: repoName,
+      baseBranch: oldBranch,
+      newBranchName: newBranch,
+    })
+    await setDefaultBranch({org: repoOrg, name: repoName, branch: newBranch})
+    await retargetPrs({
+      org: repoOrg,
+      name: repoName,
+      fromBranch: oldBranch,
+      toBranch: newBranch,
+    })
+    message = `Updated ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch} and retargetted PRs`
+  } else {
+    message = `Would create a new branch ${newBranch} from ${oldBranch} and retarget PRs`
+  }
+  log(message)
 }
 
 async function main() {
-  const owner = 'audrow'
-  const repo = 'rclcpp'
+  const isDryRun = true
+  const isForceRefresh = false
+  const rosDistroBranch = 'master'
+  const cacheDir = '.cache'
   const newBranch = 'rolling'
 
-  const oldBranch = await getDefaultBranch({owner, repo})
-  await createNewBranch({
-    owner,
-    repo,
-    baseBranch: oldBranch,
-    newBranchName: newBranch,
-  })
-  await setDefaultBranch({owner, repo, branch: newBranch})
-  await retargetPrs({owner, repo, fromBranch: oldBranch, toBranch: newBranch})
+  makeCacheDir({path: cacheDir, isForceRefresh})
+
+  const reposYamlPath = join(cacheDir, `ros2.repos.${rosDistroBranch}.yaml`)
+  const url = `https://raw.githubusercontent.com/ros2/ros2/${rosDistroBranch}/ros2.repos`
+  await downloadFile({url, path: reposYamlPath})
+  const repos = getRepos(reposYamlPath, REPOS_TO_EXCLUDE)
+
+  const someRepos = repos.slice(0, 5)
+  for (const repo of someRepos) {
+    console.log(`Processing ${repo.org}/${repo.name}`)
+    const oldBranch = await getDefaultBranch({org: repo.org, name: repo.name})
+
+    if (oldBranch !== newBranch) {
+      const repoPath = join(cacheDir, rosDistroBranch, repo.org, repo.name)
+
+      const pullMessage = await pullGitRepo({
+        url: repo.url,
+        destinationPath: repoPath,
+        version: repo.version,
+      })
+      log(pullMessage)
+
+      await pushMirrorWorkflow({
+        oldBranch,
+        newBranch,
+        repoPath,
+        isDryRun,
+      })
+
+      await changeDefaultBranchAndRetargetPrs({
+        oldBranch,
+        newBranch,
+        repoOrg: repo.org,
+        repoName: repo.name,
+        isDryRun,
+      })
+    } else {
+      log(
+        `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${rosDistroBranch}`,
+      )
+    }
+  }
 }
 
 if (typeof require !== 'undefined' && require.main === module) {
