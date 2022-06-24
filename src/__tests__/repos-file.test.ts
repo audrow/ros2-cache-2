@@ -1,11 +1,6 @@
 import fs from 'fs'
 import {join} from 'path'
-import {
-  getRepos,
-  mergeReposFiles,
-  splitGithubUrl,
-  toReposFile,
-} from '../repos-file'
+import {getRepos, splitGithubUrl, toReposFile} from '../repos-file'
 
 const PATH_TO_REPOS_FILE = join(
   __dirname,
@@ -13,19 +8,6 @@ const PATH_TO_REPOS_FILE = join(
   'ros2.repos.master.yaml',
 )
 const REPOS_FILE_TEXT = fs.readFileSync(PATH_TO_REPOS_FILE, 'utf8')
-const REPOS_TO_EXCLUDE = [
-  'eProsima/Fast-CDR',
-  'eProsima/Fast-DDS',
-  'eProsima/foonathan_memory_vendor',
-  'eclipse-cyclonedds/cyclonedds',
-  'eclipse-iceoryx/iceoryx',
-  'osrf/osrf_pycommon',
-  'osrf/osrf_testing_tools_cpp',
-  'ros-tracing/ros2_tracing',
-  'ros/urdfdom',
-  'ros/urdfdom_headers',
-  'ros2/rosbag2',
-]
 
 test('split org and name from github url', () => {
   ;[
@@ -59,34 +41,4 @@ test('repos file should be processed and returned to the same thing', () => {
 
   const processedReposText = toReposFile(repos)
   expect(REPOS_FILE_TEXT).toBe(processedReposText)
-})
-
-test('repos files should be merged to include excluded repos', () => {
-  const newBranch = 'some-new-branch-name'
-  const oldBranch = 'some-old-branch-name'
-  const primary = getRepos(PATH_TO_REPOS_FILE, REPOS_TO_EXCLUDE)
-  primary.forEach((r) => {
-    r.version = newBranch
-  })
-  const secondary = getRepos(PATH_TO_REPOS_FILE)
-  secondary.forEach((r) => {
-    r.version = oldBranch
-  })
-  const output = mergeReposFiles(primary, secondary, REPOS_TO_EXCLUDE)
-
-  let reposWithOldBranch = 0
-  let reposWithNewBranch = 0
-  output.forEach((r) => {
-    const excludeKey = `${r.org}/${r.name}`
-    if (REPOS_TO_EXCLUDE.includes(excludeKey)) {
-      expect(r.version).toBe(oldBranch)
-      reposWithOldBranch++
-    } else {
-      expect(r.version).toBe(newBranch)
-      reposWithNewBranch++
-    }
-  })
-  expect(reposWithOldBranch).toBe(REPOS_TO_EXCLUDE.length)
-  expect(reposWithNewBranch).toBe(primary.length)
-  expect(output.length).toBe(primary.length + REPOS_TO_EXCLUDE.length)
 })
