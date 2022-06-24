@@ -2,7 +2,7 @@ import fs from 'fs'
 import {dirname, resolve} from 'path'
 import simpleGit from 'simple-git'
 
-export async function createAddAndCommitFile({
+export async function createCommitAndPushFile({
   repoPath,
   filePath,
   fileContent,

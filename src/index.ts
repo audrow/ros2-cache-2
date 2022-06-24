@@ -1,19 +1,26 @@
 import endent from 'endent'
 import {existsSync} from 'fs'
-import {downloadFile, getRepos, makeCacheDir, pullGitRepo} from './cache'
+import {downloadFile, makeCacheDir, pullGitRepo} from './cache'
 import {REPOS_TO_EXCLUDE} from './config'
-import {createAddAndCommitFile} from './file-system'
+import {
+  getDistributionFile,
+  setDistributionVersion,
+  toDistributionFile,
+} from './distribution-file'
+import {createCommitAndPushFile} from './file-system'
 import {
   createNewBranch,
   getDefaultBranch,
   retargetPrs,
   setDefaultBranch,
 } from './github'
+import {getRepos, toReposFile} from './repos-file'
 
+import fs from 'fs'
 import {join} from 'path'
 
 function log(message: string) {
-  console.log(` * ${message}`)
+  console.log(` - ${message}`)
 }
 
 async function pushMirrorWorkflow({
@@ -52,7 +59,7 @@ async function pushMirrorWorkflow({
             with:
               target-branch: ${oldBranch}
     `
-    message = await createAddAndCommitFile({
+    message = await createCommitAndPushFile({
       repoPath: repoPath,
       filePath: migrationWorkflowFilePath,
       fileContent: migrationWorkflowFileContent,
@@ -101,24 +108,48 @@ async function changeDefaultBranchAndRetargetPrs({
 async function main() {
   const isDryRun = true
   const isForceRefresh = false
-  const rosDistroBranch = 'master'
   const cacheDir = '.cache'
   const newBranch = 'rolling'
+  const reposBranch = 'master'
+  const rosDistroDirectory = 'rolling'
 
   makeCacheDir({path: cacheDir, isForceRefresh})
 
-  const reposYamlPath = join(cacheDir, `ros2.repos.${rosDistroBranch}.yaml`)
-  const url = `https://raw.githubusercontent.com/ros2/ros2/${rosDistroBranch}/ros2.repos`
-  await downloadFile({url, path: reposYamlPath})
-  const repos = getRepos(reposYamlPath, REPOS_TO_EXCLUDE)
+  // Setup repos data structure
+  const reposYamlPath = join(cacheDir, `ros2.repos.${reposBranch}.yaml`)
+  const outputReposYamlPath = join(
+    cacheDir,
+    `ros2.repos.${reposBranch}.output.yaml`,
+  )
+  const reposYamlUrl = `https://raw.githubusercontent.com/ros2/ros2/${reposBranch}/ros2.repos`
+  await downloadFile({url: reposYamlUrl, path: reposYamlPath})
+  const repos = getRepos(reposYamlPath)
 
-  const someRepos = repos.slice(0, 5)
-  for (const repo of someRepos) {
-    console.log(`Processing ${repo.org}/${repo.name}`)
+  // Setup distribution data structure
+  const rosDistroYamlPath = join(
+    cacheDir,
+    `distribution.${rosDistroDirectory}.yaml`,
+  )
+  const outputRosDistroYamlPath = join(
+    cacheDir,
+    `distribution.${rosDistroDirectory}.output.yaml`,
+  )
+  const rosDistroYamlUrl = `https://raw.githubusercontent.com/ros/rosdistro/master/${rosDistroDirectory}/distribution.yaml`
+  await downloadFile({url: rosDistroYamlUrl, path: rosDistroYamlPath})
+  const distribution = getDistributionFile(rosDistroYamlPath)
+
+  for (const repo of repos) {
+    if (REPOS_TO_EXCLUDE.includes(`${repo.org}/${repo.name}`)) {
+      console.log(
+        `Skipping ${repo.org}/${repo.name} since it is on the exclude list`,
+      )
+      continue
+    }
+
     const oldBranch = await getDefaultBranch({org: repo.org, name: repo.name})
-
     if (oldBranch !== newBranch) {
-      const repoPath = join(cacheDir, rosDistroBranch, repo.org, repo.name)
+      console.log(`Processing ${repo.org}/${repo.name}`)
+      const repoPath = join(cacheDir, reposBranch, repo.org, repo.name)
 
       const pullMessage = await pullGitRepo({
         url: repo.url,
@@ -141,12 +172,28 @@ async function main() {
         repoName: repo.name,
         isDryRun,
       })
+
+      repo.version = newBranch
+      try {
+        setDistributionVersion(distribution, repo.name, newBranch)
+      } catch (e) {
+        log(
+          `Could not update distribution.yaml, since ${repo.org}/${repo.name} is not in the distribution.yaml`,
+        )
+      }
     } else {
       log(
-        `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${rosDistroBranch}`,
+        `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${reposBranch}`,
       )
     }
   }
+  // Update ROS2.repos.yaml
+  const newReposFile = toReposFile(repos)
+  fs.writeFileSync(outputReposYamlPath, newReposFile)
+
+  // Update distribution.yaml
+  const newDistributionFile = toDistributionFile(distribution)
+  fs.writeFileSync(outputRosDistroYamlPath, newDistributionFile)
 }
 
 if (typeof require !== 'undefined' && require.main === module) {

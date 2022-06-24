@@ -2,6 +2,9 @@ import 'dotenv/config'
 import {Octokit} from 'octokit'
 
 const githubAccessToken = process.env.GITHUB_TOKEN
+if (!githubAccessToken) {
+  throw new Error('GITHUB_TOKEN is not set')
+}
 const octokit = new Octokit({auth: githubAccessToken})
 
 export async function getDefaultBranch({
