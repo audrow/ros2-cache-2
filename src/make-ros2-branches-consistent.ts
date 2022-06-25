@@ -60,6 +60,7 @@ export default async function makeRos2BranchesConsistent({
   await downloadFile({url: rosDistroYamlUrl, path: rosDistroYamlPath})
   const distribution = getDistributionFile(rosDistroYamlPath)
 
+  const errors: string[] = []
   for (const repo of repos) {
     if (reposToExclude.includes(`${repo.org}/${repo.name}`)) {
       console.log(
@@ -78,33 +79,49 @@ export default async function makeRos2BranchesConsistent({
         destinationPath: repoPath,
         version: repo.version,
       })
-      log(pullMessage)
+      logSubItem(pullMessage)
 
-      await pushMirrorWorkflow({
-        oldBranch,
-        newBranch,
-        repoPath,
-        isDryRun,
-      })
+      try {
+        await pushMirrorWorkflow({
+          oldBranch,
+          newBranch,
+          repoPath,
+          isDryRun,
+        })
+      } catch (e) {
+        const message = `Error changing default branch and retargetting PRs on ${
+          repo.org
+        }/${repo.name}: ${e instanceof Error ? e.message : e}`
+        logSubItemError(message)
+        errors.push(message)
+      }
 
-      await changeDefaultBranchAndRetargetPrs({
-        oldBranch,
-        newBranch,
-        repoOrg: repo.org,
-        repoName: repo.name,
-        isDryRun,
-      })
+      try {
+        await changeDefaultBranchAndRetargetPrs({
+          oldBranch,
+          newBranch,
+          repoOrg: repo.org,
+          repoName: repo.name,
+          isDryRun,
+        })
+      } catch (e: unknown) {
+        const message = `Error changing default branch and retargetting PRs on ${
+          repo.org
+        }/${repo.name}: ${e instanceof Error ? e.message : e}`
+        logSubItemError(message)
+        errors.push(message)
+      }
 
       repo.version = newBranch
       try {
         setDistributionVersion(distribution, repo.name, newBranch)
       } catch (e) {
-        log(
+        logSubItem(
           `Could not update distribution.yaml, since ${repo.org}/${repo.name} is not in the distribution.yaml`,
         )
       }
     } else {
-      log(
+      logSubItem(
         `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${reposBranch}`,
       )
     }
@@ -116,10 +133,21 @@ export default async function makeRos2BranchesConsistent({
   // Update distribution.yaml
   const newDistributionFile = toDistributionFile(distribution)
   fs.writeFileSync(outputRosDistroYamlPath, newDistributionFile)
+
+  if (errors.length > 0) {
+    console.log(`Finished with errors:`)
+    errors.forEach(logSubItem)
+  } else {
+    console.log('Done! - No errors')
+  }
 }
 
-function log(message: string) {
+function logSubItem(message: string) {
   console.log(` - ${message}`)
+}
+
+function logSubItemError(message: string) {
+  logSubItem(`ERROR: ${message}`)
 }
 
 async function pushMirrorWorkflow({
@@ -166,7 +194,7 @@ async function pushMirrorWorkflow({
       isDryRun,
     })
   }
-  log(message)
+  logSubItem(message)
 }
 
 async function changeDefaultBranchAndRetargetPrs({
@@ -201,5 +229,5 @@ async function changeDefaultBranchAndRetargetPrs({
   } else {
     message = `Would create a new branch ${newBranch} from ${oldBranch} and retarget PRs`
   }
-  log(message)
+  logSubItem(message)
 }
