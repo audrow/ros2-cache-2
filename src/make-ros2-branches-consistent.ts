@@ -21,14 +21,18 @@ import {join} from 'path'
 export default async function makeRos2BranchesConsistent({
   newBranch,
   reposBranch,
+  reposYamlUrl,
   rosDistroDirectory,
+  rosDistroYamlUrl,
   reposToExclude,
   cacheDir = '.cache',
   isDryRun = true,
   isForceRefresh = false,
 }: {
   newBranch: string
+  reposYamlUrl?: string
   reposBranch: string
+  rosDistroYamlUrl?: string
   rosDistroDirectory: string
   reposToExclude: string[]
   cacheDir?: string
@@ -43,7 +47,9 @@ export default async function makeRos2BranchesConsistent({
     cacheDir,
     `ros2.repos.${reposBranch}.output.yaml`,
   )
-  const reposYamlUrl = `https://raw.githubusercontent.com/ros2/ros2/${reposBranch}/ros2.repos`
+  if (!reposYamlUrl) {
+    reposYamlUrl = `https://raw.githubusercontent.com/ros2/ros2/${reposBranch}/ros2.repos`
+  }
   await downloadFile({url: reposYamlUrl, path: reposYamlPath})
   const repos = getRepos(reposYamlPath)
 
@@ -56,19 +62,23 @@ export default async function makeRos2BranchesConsistent({
     cacheDir,
     `distribution.${rosDistroDirectory}.output.yaml`,
   )
-  const rosDistroYamlUrl = `https://raw.githubusercontent.com/ros/rosdistro/master/${rosDistroDirectory}/distribution.yaml`
+  if (!rosDistroYamlUrl) {
+    rosDistroYamlUrl = `https://raw.githubusercontent.com/ros/rosdistro/master/${rosDistroDirectory}/distribution.yaml`
+  }
   await downloadFile({url: rosDistroYamlUrl, path: rosDistroYamlPath})
   const distribution = getDistributionFile(rosDistroYamlPath)
 
   const errors: string[] = []
+  const reposSkipped: string[] = []
   for (const repo of repos) {
     if (reposToExclude.includes(`${repo.org}/${repo.name}`)) {
       console.log(
-        `Skipping ${repo.org}/${repo.name} since it is on the exclude list`,
+        `Excluded ${repo.org}/${repo.name} since it is on the exclude list`,
       )
       continue
     }
 
+    console.log('\n')
     const oldBranch = await getDefaultBranch({org: repo.org, name: repo.name})
     if (oldBranch !== newBranch) {
       console.log(`Processing ${repo.org}/${repo.name}`)
@@ -104,6 +114,14 @@ export default async function makeRos2BranchesConsistent({
           repoName: repo.name,
           isDryRun,
         })
+        repo.version = newBranch
+        try {
+          setDistributionVersion(distribution, repo.name, newBranch)
+        } catch (e) {
+          logSubItem(
+            `Could not update distribution.yaml, since ${repo.org}/${repo.name} is not in the distribution.yaml`,
+          )
+        }
       } catch (e: unknown) {
         const message = `Error changing default branch and retargetting PRs on ${
           repo.org
@@ -111,7 +129,13 @@ export default async function makeRos2BranchesConsistent({
         logSubItemError(message)
         errors.push(message)
       }
-
+    } else {
+      console.log('\n')
+      logSubItem(
+        `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${newBranch}`,
+      )
+      reposSkipped.push(`${repo.org}/${repo.name}`)
+      // TODO: Remove this duplication
       repo.version = newBranch
       try {
         setDistributionVersion(distribution, repo.name, newBranch)
@@ -120,10 +144,6 @@ export default async function makeRos2BranchesConsistent({
           `Could not update distribution.yaml, since ${repo.org}/${repo.name} is not in the distribution.yaml`,
         )
       }
-    } else {
-      logSubItem(
-        `Doing nothing - ${repo.org}/${repo.name} already has the default branch ${reposBranch}`,
-      )
     }
   }
   // Update ROS2.repos.yaml
@@ -139,6 +159,10 @@ export default async function makeRos2BranchesConsistent({
     errors.forEach(logSubItem)
   } else {
     console.log('Done! - No errors')
+  }
+  if (reposSkipped.length > 0) {
+    console.log(`Skipped repos:`)
+    reposSkipped.forEach(logSubItem)
   }
 }
 
@@ -171,7 +195,8 @@ async function pushMirrorWorkflow({
   if (existsSync(migrationWorkflowFilePath)) {
     message = `Doing nothing - Workflow file already exists: ${migrationWorkflowFilePath}`
   } else {
-    const migrationWorkflowFileContent = endent`
+    const migrationWorkflowFileContent =
+      endent`
       name: Mirror ${newBranch} to ${oldBranch}
 
       on:
@@ -185,7 +210,7 @@ async function pushMirrorWorkflow({
           - uses: zofrex/mirror-branch@v1
             with:
               target-branch: ${oldBranch}
-    `
+    ` + '\n'
     message = await createCommitAndPushFile({
       repoPath: repoPath,
       filePath: migrationWorkflowFilePath,
@@ -212,20 +237,43 @@ async function changeDefaultBranchAndRetargetPrs({
 }) {
   let message: string
   if (!isDryRun) {
+    let isError = false
     await createNewBranch({
       org: repoOrg,
       name: repoName,
       baseBranch: oldBranch,
       newBranchName: newBranch,
     })
-    await setDefaultBranch({org: repoOrg, name: repoName, branch: newBranch})
-    await retargetPrs({
-      org: repoOrg,
-      name: repoName,
-      fromBranch: oldBranch,
-      toBranch: newBranch,
-    })
-    message = `Updated ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch} and retargetted PRs`
+    try {
+      await setDefaultBranch({org: repoOrg, name: repoName, branch: newBranch})
+    } catch (e) {
+      logSubItem(
+        `Error changing default branch on ${repoOrg}/${repoName}: ${
+          e instanceof Error ? e.message : e
+        }`,
+      )
+      isError = true
+    }
+    try {
+      await retargetPrs({
+        org: repoOrg,
+        name: repoName,
+        fromBranch: oldBranch,
+        toBranch: newBranch,
+      })
+    } catch (e) {
+      logSubItem(
+        `Error retargeting PRs on ${repoOrg}/${repoName}: ${
+          e instanceof Error ? e.message : e
+        }`,
+      )
+      isError = true
+    }
+    if (!isError) {
+      message = `Updated ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch} and retargetted PRs`
+    } else {
+      message = `Errors updating ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch}`
+    }
   } else {
     message = `Would create a new branch ${newBranch} from ${oldBranch} and retarget PRs`
   }
