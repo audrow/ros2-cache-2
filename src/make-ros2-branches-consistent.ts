@@ -79,8 +79,7 @@ export default async function makeRos2BranchesConsistent({
     }
 
     console.log('\n')
-    const oldBranch = await getDefaultBranch({org: repo.org, name: repo.name})
-    if (oldBranch !== newBranch) {
+    if (repo.version !== newBranch) {
       console.log(`Processing ${repo.org}/${repo.name}`)
       const repoPath = join(cacheDir, reposBranch, repo.org, repo.name)
 
@@ -93,7 +92,7 @@ export default async function makeRos2BranchesConsistent({
 
       try {
         await pushMirrorWorkflow({
-          oldBranch,
+          oldBranch: repo.version,
           newBranch,
           repoPath,
           isDryRun,
@@ -107,12 +106,18 @@ export default async function makeRos2BranchesConsistent({
       }
 
       try {
+        const currentDefaultBranch = await getDefaultBranch({
+          org: repo.org,
+          name: repo.name,
+        })
+        const isChangeDefaultBranch = repo.version === currentDefaultBranch
         await changeDefaultBranchAndRetargetPrs({
-          oldBranch,
+          baseBranch: repo.version,
           newBranch,
           repoOrg: repo.org,
           repoName: repo.name,
           isDryRun,
+          isChangeDefaultBranch,
         })
         repo.version = newBranch
         try {
@@ -223,17 +228,19 @@ async function pushMirrorWorkflow({
 }
 
 async function changeDefaultBranchAndRetargetPrs({
-  oldBranch,
+  baseBranch,
   newBranch,
   repoOrg,
   repoName,
   isDryRun,
+  isChangeDefaultBranch,
 }: {
-  oldBranch: string
+  baseBranch: string
   newBranch: string
   repoOrg: string
   repoName: string
   isDryRun: boolean
+  isChangeDefaultBranch: boolean
 }) {
   let message: string
   if (!isDryRun) {
@@ -241,24 +248,30 @@ async function changeDefaultBranchAndRetargetPrs({
     await createNewBranch({
       org: repoOrg,
       name: repoName,
-      baseBranch: oldBranch,
+      baseBranch,
       newBranchName: newBranch,
     })
-    try {
-      await setDefaultBranch({org: repoOrg, name: repoName, branch: newBranch})
-    } catch (e) {
-      logSubItem(
-        `Error changing default branch on ${repoOrg}/${repoName}: ${
-          e instanceof Error ? e.message : e
-        }`,
-      )
-      isError = true
+    if (isChangeDefaultBranch) {
+      try {
+        await setDefaultBranch({
+          org: repoOrg,
+          name: repoName,
+          branch: newBranch,
+        })
+      } catch (e) {
+        logSubItem(
+          `Error changing default branch on ${repoOrg}/${repoName}: ${
+            e instanceof Error ? e.message : e
+          }`,
+        )
+        isError = true
+      }
     }
     try {
       await retargetPrs({
         org: repoOrg,
         name: repoName,
-        fromBranch: oldBranch,
+        fromBranch: baseBranch,
         toBranch: newBranch,
       })
     } catch (e) {
@@ -270,12 +283,12 @@ async function changeDefaultBranchAndRetargetPrs({
       isError = true
     }
     if (!isError) {
-      message = `Updated ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch} and retargetted PRs`
+      message = `Updated ${repoOrg}/${repoName} default branch from ${baseBranch} to ${newBranch} and retargetted PRs`
     } else {
-      message = `Errors updating ${repoOrg}/${repoName} default branch from ${oldBranch} to ${newBranch}`
+      message = `Errors updating ${repoOrg}/${repoName} default branch from ${baseBranch} to ${newBranch}`
     }
   } else {
-    message = `Would create a new branch ${newBranch} from ${oldBranch} and retarget PRs`
+    message = `Would create a new branch ${newBranch} from ${baseBranch} and retarget PRs`
   }
   logSubItem(message)
 }
