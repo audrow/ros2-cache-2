@@ -14,7 +14,7 @@
     "clean": "rm -rf dist",
     "prepare": "husky install",
     "lint": "eslint src --ignore-path .gitignore --max-warnings 0",
-    "prettier": "prettier --ignore-path .gitignore \"**/*.(js|jsx|json|yml|yaml|css|ts|tsx|md|mdx)\"",
+    "prettier": "prettier --ignore-path .gitignore \"**/*.(js|jsx|json|css|ts|tsx|md|mdx)\"",
     "format": "npm run prettier -- --write",
     "check-format": "npm run prettier -- --list-different",
     "test": "jest",
