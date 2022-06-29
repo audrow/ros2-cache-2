@@ -1,10 +1,8 @@
-import fs from 'fs'
 import {join} from 'path'
 import {
   getDistributionFile,
   getFromDistribution,
   setDistributionVersion,
-  toDistributionFile,
 } from '../distribution-file'
 
 const DISTRIBUTION_YAML_PATH = join(
@@ -40,13 +38,5 @@ describe('distribution-file', () => {
     expect(getFromDistribution(newDist, 'rclcpp').source!.version).toBe(
       newVersion,
     )
-  })
-
-  it('should output the same repos file as read in', () => {
-    const rawFile = fs.readFileSync(DISTRIBUTION_YAML_PATH, 'utf8')
-
-    const dist = getDistributionFile(DISTRIBUTION_YAML_PATH)
-    const output = toDistributionFile(dist)
-    expect(output).toBe(rawFile)
   })
 })
