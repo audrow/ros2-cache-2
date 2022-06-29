@@ -997,6 +997,21 @@ repositories:
       url: https://github.com/ros/filters.git
       version: ros2
     status: maintained
+  fluent_rviz:
+    doc:
+      type: git
+      url: https://github.com/ForteFibre/FluentRviz.git
+      version: ros2
+    release:
+      tags:
+        release: release/rolling/{package}/{version}
+      url: https://github.com/ros2-gbp/fluent_rviz-release.git
+      version: 0.0.3-1
+    source:
+      type: git
+      url: https://github.com/ForteFibre/FluentRviz.git
+      version: ros2
+    status: developed
   fmi_adapter:
     doc:
       type: git
@@ -2103,7 +2118,7 @@ repositories:
       tags:
         release: release/rolling/{package}/{version}
       url: https://github.com/ros2-gbp/moveit_resources-release.git
-      version: 2.0.4-2
+      version: 2.0.5-1
     source:
       type: git
       url: https://github.com/ros-planning/moveit_resources.git
@@ -2305,6 +2320,19 @@ repositories:
       url: https://github.com/ros-drivers/nmea_msgs.git
       version: ros2
     status: maintained
+  nmea_navsat_driver:
+    release:
+      tags:
+        release: release/rolling/{package}/{version}
+      url: https://github.com/ros2-gbp/nmea_navsat_driver-release.git
+      version: 2.0.0-1
+    source:
+      test_pull_requests: true
+      type: git
+      url: https://github.com/ros-drivers/nmea_navsat_driver.git
+      version: ros2
+    status: developed
+    status_description: ROS2 support is work-in-progress. Help wanted!
   nodl:
     doc:
       type: git
@@ -3662,6 +3690,24 @@ repositories:
       type: git
       url: https://github.com/ros2/rmw_implementation.git
       version: master
+    status: developed
+  robot_calibration:
+    doc:
+      type: git
+      url: https://github.com/mikeferguson/robot_calibration.git
+      version: ros2
+    release:
+      packages:
+        - robot_calibration
+        - robot_calibration_msgs
+      tags:
+        release: release/rolling/{package}/{version}
+      url: https://github.com/ros2-gbp/robot_calibration-release.git
+      version: 0.8.0-1
+    source:
+      type: git
+      url: https://github.com/mikeferguson/robot_calibration.git
+      version: ros2
     status: developed
   robot_localization:
     release:
@@ -5438,7 +5484,7 @@ repositories:
       tags:
         release: release/rolling/{package}/{version}
       url: https://github.com/ros2-gbp/Universal_Robots_ROS2_Driver-release.git
-      version: 2.2.0-1
+      version: 2.2.1-1
     source:
       type: git
       url: https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver.git

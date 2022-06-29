@@ -43,7 +43,6 @@ export function setDistributionVersion(
 export function toDistributionFile(distribution: DistributionFile) {
   const {header, ...contents} = distribution
   let output = yaml.dump(contents, {noArrayIndent: true, lineWidth: -1})
-  console.log(typeof header)
   output = header + '\n' + output
   return output
 }
