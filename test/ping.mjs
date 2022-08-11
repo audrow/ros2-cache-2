@@ -1,6 +1,6 @@
-import test from 'ava';
-import { ping } from '../dist/main.js';
+import test from 'ava'
+import { ping } from '../dist/main.js'
 
 test('ping', (t) => {
-  t.is(ping(), 'pong');
-});
+  t.is(ping(), 'pong')
+})
