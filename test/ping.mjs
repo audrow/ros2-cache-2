@@ -1,7 +1,6 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from 'ava';
 import { ping } from '../dist/main.js';
 
-test('ping', (_t) => {
-  assert.equal(ping(), 'pong');
+test('ping', (t) => {
+  t.is(ping(), 'pong');
 });
