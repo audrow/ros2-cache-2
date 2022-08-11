@@ -1,6 +1,6 @@
 {
-  "name": "microbundle-ts-pkg",
-  "description": "A TypeScript npm package skeleton/starter project with microbundle, node:test and prettier",
+  "name": "ros-cache-2",
+  "description": "Cache ROS 2 files",
   "version": "0.0.1",
   "source": "src/main.ts",
   "main": "dist/main.umd.js",
@@ -8,8 +8,8 @@
   "unpkg": "dist/main.umd.js",
   "types": "dist/main.d.ts",
   "keywords": [
-    "microbundle",
-    "typescript"
+    "ros2",
+    "cache"
   ],
   "files": [
     "dist/**.js*",
@@ -41,11 +41,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HugoDF/microbundle-ts-pkg.git"
+    "url": "git+https://github.com/audrow/ros2-cache-2.git"
   },
   "author": "Hugo",
   "bugs": {
-    "url": "https://github.com/HugoDF/microbundle-ts-pkg/issues"
+    "url": "https://github.com/audrow/ros2-cache-2/issues"
   },
-  "homepage": "https://github.com/HugoDF/microbundle-ts-pkg#readme"
+  "homepage": "https://github.com/audrow/ros2-cache-2#readme"
 }
