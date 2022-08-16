@@ -1,16 +1,14 @@
 {
-  "name": "node-ts-template",
-  "version": "0.0.1",
-  "description": "A starting point for NodeJS Typescript projects.",
-  "main": "dist/cjs/index.js",
-  "types": "dist/types/index.d.ts",
-  "module": "dist/esm/index.js",
+  "name": "ros2-cache",
+  "version": "0.0.4",
+  "description": "Cache ROS 2 files",
   "source": "src/index.ts",
+  "main": "dist/index.umd.js",
+  "module": "dist/index.modern.module.js",
+  "unpkg": "dist/index.umd.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run clean && npm run build:cjs && npm run build:esm && npm run build:types",
-    "build:cjs": "tsc --project ./tsconfig.cjs.json",
-    "build:esm": "tsc --project ./tsconfig.esm.json",
-    "build:types": "tsc --project ./tsconfig.types.json",
+    "build": "microbundle --define PKG_VERSION=$npm_package_version --target node",
     "clean": "rm -rf dist",
     "prepare": "husky install",
     "lint": "eslint src --ignore-path .gitignore --max-warnings 0",
@@ -19,30 +17,32 @@
     "check-format": "npm run prettier -- --list-different",
     "test": "jest",
     "validate-sync": "npm-run-all lint check-format build test",
-    "validate": "npm-run-all --parallel lint check-format build test"
+    "validate": "npm-run-all --parallel lint check-format build test",
+    "prepack": "rm -rf dist && npm run build",
+    "release": "npm run prepack && source .env && npx np"
   },
   "files": [
-    "dist"
+    "dist/**.js*",
+    "dist/**/*.ts"
   ],
   "author": "Audrow Nash",
   "contributors": [
     "Audrow Nash <audrow@hey.com>"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/audrow/node-js-template"
-  },
   "keywords": [
     "nodejs",
     "template",
     "typescript"
   ],
-  "homepage": "https://github.com/audrow/node-js-template",
-  "bugs": {
-    "mail": "audrow@hey.com",
-    "url": "https://github.com/audrow/node-js-template/issues"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audrow/ros2-cache.git"
   },
+  "bugs": {
+    "url": "https://github.com/audrow/ros2-cache/issues"
+  },
+  "homepage": "https://github.com/audrow/ros2-cache#readme",
   "devDependencies": {
     "@tsconfig/node16": "^1.0.3",
     "@types/git-clone": "^0.2.0",
@@ -56,6 +56,7 @@
     "husky": "^8.0.1",
     "jest": "^27.5.1",
     "lint-staged": "^13.0.3",
+    "microbundle": "^0.15.1",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.7.1",
     "prettier-plugin-organize-imports": "^3.0.0",

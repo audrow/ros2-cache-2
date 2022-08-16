@@ -1,5 +1,5 @@
 import axios from 'axios'
-import fs from 'fs'
+import * as fs from 'fs'
 import clone from 'git-clone/promise'
 import {join} from 'path'
 import simpleGit from 'simple-git'

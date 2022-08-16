@@ -1,37 +1,9 @@
-import makeRos2BranchesConsistent from './make-ros2-branches-consistent'
+export * as cache from './cache'
+export * as distributionFile from './distribution-file'
+export * as fileSystem from './file-system'
+export * as github from './github'
+export * as reposFile from './repos-file'
+export {DistributionFile, ReposFile}
 
-async function main() {
-  const newBranch = 'rolling'
-  const reposBranch = 'master'
-  const rosDistroDirectory = 'rolling'
-
-  const reposToExclude = [
-    'eProsima/Fast-CDR',
-    'eProsima/Fast-DDS',
-    'eProsima/foonathan_memory_vendor',
-    'eclipse-cyclonedds/cyclonedds',
-    'eclipse-iceoryx/iceoryx',
-    'osrf/osrf_pycommon',
-    'osrf/osrf_testing_tools_cpp',
-    'ros-tracing/ros2_tracing',
-    'ros/urdfdom',
-    'ros/urdfdom_headers',
-    'ros2/rosbag2',
-  ]
-
-  const isDryRun = true
-  const isForceRefresh = false
-
-  await makeRos2BranchesConsistent({
-    newBranch,
-    reposBranch,
-    rosDistroDirectory,
-    reposToExclude,
-    isDryRun,
-    isForceRefresh,
-  })
-}
-
-if (typeof require !== 'undefined' && require.main === module) {
-  main()
-}
+import DistributionFile from './__types__/DistributionFile'
+import ReposFile from './__types__/ReposFile'
