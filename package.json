@@ -1,5 +1,5 @@
 {
-  "name": "ros-cache-2",
+  "name": "ros2-cache",
   "description": "Cache ROS 2 files",
   "version": "0.0.1",
   "source": "src/main.ts",
@@ -42,11 +42,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audrow/ros2-cache-2.git"
+    "url": "git+https://github.com/audrow/ros2-cache.git"
   },
   "author": "Hugo",
   "bugs": {
-    "url": "https://github.com/audrow/ros2-cache-2/issues"
+    "url": "https://github.com/audrow/ros2-cache/issues"
   },
-  "homepage": "https://github.com/audrow/ros2-cache-2#readme"
+  "homepage": "https://github.com/audrow/ros2-cache#readme"
 }
