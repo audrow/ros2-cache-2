@@ -46,3 +46,8 @@ npm run watch
 npm test -- --watch
 ```
 
+If you have access, you can push to npm with the following command:
+
+```bash
+npm publish
+```
