@@ -1,5 +1,5 @@
 import {readFileSync} from 'fs'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import type DistributionYamlFile from './__types__/DistributionYamlFile'
 
 export function loadDistribution(distributionYamlPath: string) {

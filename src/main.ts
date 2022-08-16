@@ -1,3 +1,4 @@
+export * as distributionFile from './distribution-file'
 export * as git from './git'
 export * as reposFile from './repos-file'
 export {DistributionYamlFile, ProcessedRepos, ReposFile}
