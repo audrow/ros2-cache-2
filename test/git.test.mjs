@@ -1,12 +1,12 @@
+import test from 'ava'
 import simpleGit from 'simple-git'
 import tempFs from 'temp-fs'
 import {git} from '../dist/main.js'
-import test from 'ava'
 
 let path
 
 test.before(async () => {
-  const { path: path_ } = tempFs.mkdirSync({
+  const {path: path_} = tempFs.mkdirSync({
     recursive: true,
     track: true,
   })
