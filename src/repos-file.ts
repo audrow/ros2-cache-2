@@ -1,5 +1,5 @@
 import {readFileSync} from 'fs'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import type ProcessedRepos from './__types__/ProcessedRepos'
 import type ReposFile from './__types__/ReposFile'
 
