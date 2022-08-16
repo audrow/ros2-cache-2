@@ -46,7 +46,7 @@
     "type": "git",
     "url": "git+https://github.com/audrow/ros2-cache.git"
   },
-  "author": "Hugo",
+  "author": "Audrow Nash",
   "bugs": {
     "url": "https://github.com/audrow/ros2-cache/issues"
   },
