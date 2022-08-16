@@ -16,12 +16,15 @@
     "dist/**/*.ts"
   ],
   "scripts": {
-    "build": "microbundle --define PKG_VERSION=$npm_package_version",
-    "watch": "microbundle watch --define PKG_VERSION=$npm_package_version",
-    "test": "ava",
+    "build": "is-ci-cli build:ci build:local",
+    "build:ci": "microbundle --define PKG_VERSION=$npm_package_version",
+    "build:local": "microbundle watch --define PKG_VERSION=$npm_package_version",
+    "test:ci": "ava",
+    "test:local": "ava --watch",
+    "test": "is-ci-cli test:ci test:local",
     "lint": "prettier src test -c",
     "format": "prettier src test --write",
-    "prepack": "rm -rf dist && npm run build",
+    "prepack": "rm -rf dist && npm run build:ci",
     "release": "npm run prepack && source .env && npx np"
   },
   "devDependencies": {
@@ -51,6 +54,7 @@
   },
   "homepage": "https://github.com/audrow/ros2-cache#readme",
   "dependencies": {
+    "is-ci-cli": "^2.2.0",
     "js-yaml": "^4.1.0",
     "simple-git": "^3.12.0",
     "temp-fs": "^0.9.9"

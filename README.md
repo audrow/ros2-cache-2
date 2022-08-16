@@ -38,12 +38,12 @@ For convenience, you can build and test with watch mode with the following comma
 
 ```bash
 # terminal 1
-npm run watch
+npm run build
 ```
 
 ```bash
 # terminal 2
-npm test -- --watch
+npm test
 ```
 
 If you have access, you can push to npm with the following command:
