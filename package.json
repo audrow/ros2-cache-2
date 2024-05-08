@@ -70,7 +70,7 @@
     "endent": "^2.1.0",
     "git-clone": "^0.2.0",
     "js-yaml": "^4.1.0",
-    "octokit": "^3.0.0",
+    "octokit": "^4.0.1",
     "simple-git": "^3.10.0"
   }
 }
